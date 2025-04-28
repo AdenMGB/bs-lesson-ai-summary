@@ -76,11 +76,14 @@ function getLessonContent(lessonElement: Element): string {
         }
     }
 
-    // Get content from iframes with class="userHTML"
-    const userHtmlIframes = document.querySelectorAll('iframe.userHTML');
-    userHtmlIframes.forEach((iframe) => {
+    // Get all iframes with class="userHTML" and all iframes under .iframeWrapper
+    const userHtmlIframes = Array.from(document.querySelectorAll('iframe.userHTML'));
+    const wrapperIframes = Array.from(document.querySelectorAll('.iframeWrapper iframe'));
+    // Combine and deduplicate
+    const allIframes = Array.from(new Set([...userHtmlIframes, ...wrapperIframes])) as HTMLIFrameElement[];
+    allIframes.forEach((iframe) => {
         try {
-            const doc = (iframe as HTMLIFrameElement).contentDocument;
+            const doc = iframe.contentDocument;
             if (doc && doc.body) {
                 const iframeTexts: string[] = [];
                 const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
@@ -97,9 +100,13 @@ function getLessonContent(lessonElement: Element): string {
                         iframeTexts.push(node.textContent.trim());
                     }
                 }
+                // If no text but there are child elements, add a placeholder
                 if (iframeTexts.length > 0) {
                     content.push('Embedded Frame Content:');
                     content.push(iframeTexts.join('\n'));
+                } else if (doc.body.children.length > 0) {
+                    content.push('Embedded Frame Content:');
+                    content.push('[Embedded lesson content present]');
                 }
             }
         } catch (e) {
@@ -140,6 +147,49 @@ function getContent(): string {
     // If not in a lesson view, get course overview
     return getCourseOverviewContent();
 }
+
+// Simple markdown-to-HTML parser for Gemini summaries
+function parseGeminiMarkdown(text: string): string {
+    // Convert **bold** to <strong>
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Convert *italic* to <em>
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Convert numbered lists
+    text = text.replace(/\n\s*\d+\. (.*?)(?=\n|$)/g, '<li>$1</li>');
+    // Convert bullet lists
+    text = text.replace(/\n\s*[-*] (.*?)(?=\n|$)/g, '<li>$1</li>');
+    // Wrap consecutive <li> in <ul> or <ol>
+    text = text.replace(/(<li>.*?<\/li>)+/gs, match => {
+        // If it looks like a numbered list, use <ol>
+        if (/\d+\./.test(match)) return `<ol>${match}</ol>`;
+        return `<ul>${match}</ul>`;
+    });
+    // Convert headings (e.g., **1. Topics Covered:**)
+    text = text.replace(/<strong>(\d+\..*?:)<\/strong>/g, '<h4>$1</h4>');
+    // Convert newlines to <br> (for anything not handled above)
+    text = text.replace(/\n/g, '<br>');
+    return text;
+}
+
+// Inject CSS for summary box styling and scrollable content
+(function addGeminiSummaryStyles() {
+    if (document.getElementById('gemini-summary-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'gemini-summary-styles';
+    style.textContent = `
+      .gemini-summary-content {
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 8px;
+        height: 0;
+        transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .gemini-summary-content.expanded {
+        height: 300px;
+      }
+    `;
+    document.head.appendChild(style);
+})();
 
 export async function HandleGeminiSummary(api: PluginAPI<typeof settings>): Promise<(element: Element) => void> {
   // Get API key from settings
@@ -267,7 +317,16 @@ export async function HandleGeminiSummary(api: PluginAPI<typeof settings>): Prom
 
           // Display the summary
           if (summaryContent) {
-            summaryContent.textContent = summary;
+            // Animate expansion
+            const summaryContentDiv = summaryContent as HTMLElement;
+            summaryContentDiv.innerHTML = parseGeminiMarkdown(summary);
+            summaryContentDiv.style.height = '0px'; // Start collapsed
+            void summaryContentDiv.offsetWidth; // Force reflow
+            const targetHeight = Math.min(summaryContentDiv.scrollHeight, 300);
+            summaryContentDiv.style.height = targetHeight + 'px';
+            setTimeout(() => {
+              summaryContentDiv.style.height = 'auto';
+            }, 400);
           }
         } catch (error) {
           console.error('[Gemini Summary] Error generating summary:', error);
