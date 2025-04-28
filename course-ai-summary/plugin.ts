@@ -2,12 +2,18 @@ import { type Plugin, type PluginSettings } from "@/plugins/core/types";
 import { HandleGeminiSummary } from "./index";
 
 // Define plugin settings
-const settings = {
+export const settings = {
   enabled: {
     type: 'boolean',
     default: true,
     title: 'Enable Gemini Summary',
     description: 'Enable or disable the Gemini-powered course summary feature'
+  },
+  geminiApiKey: {
+    type: 'string',
+    default: '',
+    title: 'Gemini API Key',
+    description: 'Your Gemini API key from Google AI Studio (https://aistudio.google.com/app/apikey)'
   }
 } as const satisfies PluginSettings;
 
@@ -40,7 +46,7 @@ export const geminiSummaryPlugin: Plugin<typeof settings> = {
             
             // Mount the summary regardless of course elements
             console.log("[Gemini Summary] Mounting summary");
-            const handler = await HandleGeminiSummary();
+            const handler = await HandleGeminiSummary(api);
             handler(content);
           }
         }, 100);

@@ -1,4 +1,8 @@
-const GEMINI_API_KEY = "YOUR API KEY HERE";
+import { type PluginAPI } from "@/plugins/core/types";
+import { settings } from "./plugin";
+
+// Get API key from settings
+let GEMINI_API_KEY = "";
 
 // Helper function to get content from a lesson
 function getLessonContent(lessonElement: Element): string {
@@ -79,7 +83,10 @@ function getContent(): string {
     return getCourseOverviewContent();
 }
 
-export async function HandleGeminiSummary(): Promise<(element: Element) => void> {
+export async function HandleGeminiSummary(api: PluginAPI<typeof settings>): Promise<(element: Element) => void> {
+  // Get API key from settings
+  GEMINI_API_KEY = api.settings.geminiApiKey;
+  
   return (element: Element) => {
     console.log("[Gemini Summary] Found content element:", element);
     
