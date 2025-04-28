@@ -90,6 +90,13 @@ export async function HandleGeminiSummary(api: PluginAPI<typeof settings>): Prom
   return (element: Element) => {
     console.log("[Gemini Summary] Found content element:", element);
     
+    // Check if summary container already exists
+    const existingContainer = element.querySelector('.gemini-summary-container');
+    if (existingContainer) {
+      console.log("[Gemini Summary] Summary container already exists, skipping creation");
+      return;
+    }
+    
     // Create summary container
     const summaryContainer = document.createElement('div');
     summaryContainer.className = 'gemini-summary-container';
