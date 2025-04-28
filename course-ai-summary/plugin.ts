@@ -53,6 +53,13 @@ export const geminiSummaryPlugin: Plugin<typeof settings> = {
         
         // Stop checking after 5 seconds
         setTimeout(() => clearInterval(checkContent), 5000);
+      } else {
+        // Remove summary container if it exists
+        const existingContainer = document.querySelector('.gemini-summary-container');
+        if (existingContainer) {
+          console.log("[Gemini Summary] Removing summary container from non-courses page");
+          existingContainer.remove();
+        }
       }
     });
   }
