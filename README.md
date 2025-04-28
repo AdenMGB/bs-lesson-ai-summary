@@ -8,8 +8,8 @@ A plugin that uses Gemini AI to generate summaries of course lessons in BetterSE
 4. Copy the contents of the `course-ai-summary` folder from this repo into the newly created folder in BetterSEQTA+
 5. Add the following before the Monofile line `...monofile...` in `BetterSEQTA-Plus/src/plugins/index.ts`:
    ```typescript
-   import {HandleGeminiSummary} from "./built-in/course-ai-summary/index.ts"
-   pluginManager.registerPlugin(HandleGeminiSummary);
+   import {geminiSummaryPlugin} from "./built-in/course-ai-summary/plugin.ts"
+   pluginManager.registerPlugin(geminiSummaryPlugin);
    ```
 6. Build BetterSEQTA+ following BetterSEQTA+'s `readme.md` file
 
