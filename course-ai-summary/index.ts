@@ -49,6 +49,64 @@ function getLessonContent(lessonElement: Element): string {
         }
     }
 
+    // Get content from iframeWrapper and its child divs
+    const iframeWrapper = document.querySelector('.iframeWrapper');
+    if (iframeWrapper) {
+        const wrapperDivs = iframeWrapper.querySelectorAll('div');
+        const wrapperTexts: string[] = [];
+        wrapperDivs.forEach(div => {
+            const walker = document.createTreeWalker(div, NodeFilter.SHOW_TEXT, {
+                acceptNode: (node) => {
+                    if (node.textContent && node.textContent.trim().length > 0) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_REJECT;
+                }
+            });
+            let node;
+            while ((node = walker.nextNode())) {
+                if (node.textContent) {
+                    wrapperTexts.push(node.textContent.trim());
+                }
+            }
+        });
+        if (wrapperTexts.length > 0) {
+            content.push('Additional Content:');
+            content.push(wrapperTexts.join('\n'));
+        }
+    }
+
+    // Get content from iframes with class="userHTML"
+    const userHtmlIframes = document.querySelectorAll('iframe.userHTML');
+    userHtmlIframes.forEach((iframe) => {
+        try {
+            const doc = (iframe as HTMLIFrameElement).contentDocument;
+            if (doc && doc.body) {
+                const iframeTexts: string[] = [];
+                const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+                    acceptNode: (node) => {
+                        if (node.textContent && node.textContent.trim().length > 0) {
+                            return NodeFilter.FILTER_ACCEPT;
+                        }
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                });
+                let node;
+                while ((node = walker.nextNode())) {
+                    if (node.textContent) {
+                        iframeTexts.push(node.textContent.trim());
+                    }
+                }
+                if (iframeTexts.length > 0) {
+                    content.push('Embedded Frame Content:');
+                    content.push(iframeTexts.join('\n'));
+                }
+            }
+        } catch (e) {
+            // Ignore cross-origin iframes
+        }
+    });
+
     return content.join('\n\n');
 }
 
