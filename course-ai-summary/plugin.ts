@@ -48,6 +48,15 @@ export const geminiSummaryPlugin: Plugin<typeof settings> = {
             console.log("[Gemini Summary] Mounting summary");
             const handler = await HandleGeminiSummary(api);
             handler(content);
+
+            // Add click handler to #content for dynamic mounting
+            content.addEventListener('click', async () => {
+              if (!content.querySelector('.gemini-summary-container')) {
+                console.log("[Gemini Summary] Click detected, remounting summary if needed");
+                const handler = await HandleGeminiSummary(api);
+                handler(content);
+              }
+            });
           }
         }, 100);
         

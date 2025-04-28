@@ -177,15 +177,100 @@ function parseGeminiMarkdown(text: string): string {
     const style = document.createElement('style');
     style.id = 'gemini-summary-styles';
     style.textContent = `
-      .gemini-summary-content {
-        max-height: 300px;
-        overflow-y: auto;
-        padding-right: 8px;
-        height: 0;
-        transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      .gemini-summary-container {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        margin: 32px 0 24px 0;
+        z-index: 1000;
+        background: none;
+        border: none;
+        box-shadow: none;
+        padding: 0;
       }
-      .gemini-summary-content.expanded {
-        height: 300px;
+      .gemini-summary-box {
+        width: 90vw;
+        max-width: 900px;
+        min-width: 320px;
+        border-radius: 48px;
+        background: #23242a;
+        color: #fff;
+        font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 32px 40px 28px 40px;
+        box-shadow: 0 0 24px 4px rgba(255, 0, 64, 0.18), 0 2px 16px 0 rgba(0,0,0,0.10);
+        border: none;
+        background-clip: padding-box;
+      }
+      .gemini-summary-box::before {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border-radius: 52px;
+        z-index: -1;
+        padding: 0;
+        background: linear-gradient(270deg, #4f8cff, #a259ff, #ff6b81, #4f8cff);
+        background-size: 400% 400%;
+        animation: gemini-border-animate 8s linear infinite;
+      }
+      @keyframes gemini-border-animate {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 100% 50%; }
+      }
+      .gemini-summary-box h3 {
+        margin: 0 0 16px 0;
+        font-size: 2rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: #fff;
+        text-shadow: 0 2px 8px rgba(80,0,80,0.12);
+      }
+      .gemini-summary-content {
+        margin-bottom: 20px;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        color: #f3f6fa;
+        word-break: break-word;
+      }
+      .gemini-summary-loading {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .gemini-summary-shimmer {
+        height: 1.2em;
+        width: 120px;
+        border-radius: 12px;
+        background: linear-gradient(90deg, #444 25%, #666 50%, #444 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.2s infinite linear;
+        display: inline-block;
+      }
+      @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+      .gemini-summary-button {
+        align-self: flex-end;
+        background: linear-gradient(90deg, #4f8cff 0%, #a259ff 100%);
+        color: #fff;
+        border: none;
+        border-radius: 24px;
+        padding: 10px 32px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 0 8px 2px rgba(255, 0, 64, 0.18);
+        transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+      }
+      .gemini-summary-button:hover {
+        background: linear-gradient(90deg, #a259ff 0%, #4f8cff 100%);
+        box-shadow: 0 0 16px 4px rgba(255, 0, 64, 0.32);
+        transform: translateY(-2px) scale(1.04);
       }
     `;
     document.head.appendChild(style);
@@ -217,19 +302,12 @@ export async function HandleGeminiSummary(api: PluginAPI<typeof settings>): Prom
     `;
 
     try {
-      // Try to find the best place to insert the summary
-      const courseHeader = element.querySelector('#title');
-      const mainContent = element.querySelector('#main');
-      
-      if (courseHeader) {
-        console.log("[Gemini Summary] Found course header, inserting after it");
-        courseHeader.parentNode?.insertBefore(summaryContainer, courseHeader.nextSibling);
-      } else if (mainContent) {
-        console.log("[Gemini Summary] Found main content, inserting before it");
-        mainContent.parentNode?.insertBefore(summaryContainer, mainContent);
+      // Mount the summary container only under a div with the class 'content'
+      const contentDiv = element.querySelector('.content');
+      if (contentDiv) {
+        contentDiv.prepend(summaryContainer);
       } else {
-        console.log("[Gemini Summary] No specific location found, inserting at top");
-        element.insertBefore(summaryContainer, element.firstChild);
+        console.warn("[Gemini Summary] No .content element found, summary container not mounted.");
       }
       
       console.log("[Gemini Summary] Summary container inserted");
@@ -336,107 +414,6 @@ export async function HandleGeminiSummary(api: PluginAPI<typeof settings>): Prom
           }
         }
       });
-    }
-
-    // Inject custom CSS for Gemini Summary
-    if (!document.getElementById('gemini-summary-style')) {
-      const style = document.createElement('style');
-      style.id = 'gemini-summary-style';
-      style.textContent = `
-        .gemini-summary-container {
-          width: 100%;
-          display: flex;
-          justify-content: center;
-          margin: 32px 0 24px 0;
-          z-index: 1000;
-        }
-        .gemini-summary-box {
-          width: 90vw;
-          max-width: 900px;
-          min-width: 320px;
-          border-radius: 48px;
-          background: #23242a;
-          color: #fff;
-          font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-          padding: 32px 40px 28px 40px;
-          box-shadow: 0 0 24px 4px rgba(255, 0, 64, 0.18), 0 2px 16px 0 rgba(0,0,0,0.10);
-          border: 4px solid transparent;
-          background-clip: padding-box;
-        }
-        .gemini-summary-box::before {
-          content: '';
-          position: absolute;
-          inset: -4px;
-          border-radius: 52px;
-          padding: 0;
-          z-index: -1;
-          background: linear-gradient(270deg, #4f8cff, #a259ff, #ff6b81, #4f8cff);
-          background-size: 300% 300%;
-          animation: gemini-border-animate 4s linear infinite;
-        }
-        @keyframes gemini-border-animate {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .gemini-summary-box h3 {
-          margin: 0 0 16px 0;
-          font-size: 2rem;
-          font-weight: 700;
-          letter-spacing: 0.02em;
-          color: #fff;
-          text-shadow: 0 2px 8px rgba(80,0,80,0.12);
-        }
-        .gemini-summary-content {
-          margin-bottom: 20px;
-          font-size: 1.1rem;
-          line-height: 1.6;
-          color: #f3f6fa;
-          word-break: break-word;
-        }
-        .gemini-summary-loading {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        .gemini-summary-shimmer {
-          height: 1.2em;
-          width: 120px;
-          border-radius: 12px;
-          background: linear-gradient(90deg, #444 25%, #666 50%, #444 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.2s infinite linear;
-          display: inline-block;
-        }
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-        .gemini-summary-button {
-          align-self: flex-end;
-          background: linear-gradient(90deg, #4f8cff 0%, #a259ff 100%);
-          color: #fff;
-          border: none;
-          border-radius: 24px;
-          padding: 10px 32px;
-          font-size: 1.1rem;
-          font-weight: 600;
-          cursor: pointer;
-          box-shadow: 0 0 8px 2px rgba(255, 0, 64, 0.18);
-          transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-        }
-        .gemini-summary-button:hover {
-          background: linear-gradient(90deg, #a259ff 0%, #4f8cff 100%);
-          box-shadow: 0 0 16px 4px rgba(255, 0, 64, 0.32);
-          transform: translateY(-2px) scale(1.04);
-        }
-      `;
-      document.head.appendChild(style);
     }
   };
 } 
